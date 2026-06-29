@@ -5,24 +5,23 @@ const products = [
         name: 'Essential Tee',
         price: 149000,
         description: 'T-shirt minimalis dengan bahan lembut, cocok untuk tampilan kasual harian.',
-        image: 'Essential Tee'
+        image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80'
     },
     {
         id: '2',
         name: 'Modern Hoodie',
         price: 299000,
         description: 'Hoodie modern dengan potongan nyaman untuk gaya kasual hangat setiap hari.',
-        image: 'Modern Hoodie'
+        image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500&auto=format&fit=crop&q=80'
     },
     {
         id: '3',
         name: 'Signature Cap',
         price: 125000,
         description: 'Topi signature yang ringan dan mudah dipadukan dengan hampir semua outfit.',
-        image: 'Signature Cap'
+        image: 'https://images.unsplash.com/photo-1534215754734-18e55d13ce3a?w=500&auto=format&fit=crop&q=80'
     }
 ];
-
 // Inisialisasi State Keranjang Belanja Menggunakan LocalStorage
 let cart = JSON.parse(localStorage.getItem('rouve_cart')) || {};
 
@@ -129,7 +128,7 @@ function openProductModal(product) {
     modalProductName.textContent = product.name;
     modalProductDescription.textContent = product.description;
     modalProductPrice.textContent = formatPrice(product.price);
-    modalProductImage.textContent = product.image;
+    modalProductImage.innerHTML = `<img src="${product.image}" alt="${product.name}" style="width:100%; height:100%; object-fit:cover;">`;
     modalQuantity.value = 1;
     modalAddToCart.dataset.productId = product.id;
     productModal.classList.remove('hidden');
