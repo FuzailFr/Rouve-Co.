@@ -26,7 +26,7 @@ const products = [
 // Inisialisasi State Keranjang Belanja Menggunakan LocalStorage
 let cart = JSON.parse(localStorage.getItem('rouve_cart')) || {};
 
-// Selektor DOM Halaman Utama (Akan bernilai NULL jika berada di payment.html)
+// Selektor DOM Halaman Utama
 const cartCountEl = document.getElementById('cartCount');
 const cartToggle = document.getElementById('cartToggle');
 const cartModal = document.getElementById('cartModal');
@@ -122,7 +122,6 @@ function renderCartItems() {
 // Fungsi Buka Tutup Modal Toko Halaman Utama
 function openCartModal() { renderCartItems(); if(cartModal) cartModal.classList.remove('hidden'); }
 function closeCart() { if(cartModal) cartModal.classList.add('hidden'); }
-// Penutupan Modal Detail Produk
 function closeProduct() { if(productModal) productModal.classList.add('hidden'); }
 
 function openProductModal(product) {
@@ -173,23 +172,60 @@ function changeCartQuantity(productId, delta) {
     renderCartItems();
 }
 
-// --- LOGIKA MENANGANI HALAMAN PEMBAYARAN MANDIRI (payment.html) ---
+// --- LOGIKA HALAMAN PEMBAYARAN & NOTA DOWNLOAD PDF (payment.html) ---
+function updatePaymentInstructions() {
+    const instructionContent = document.getElementById('instructionContent');
+    if (!instructionContent) return;
+
+    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const totalAmountText = document.getElementById('paymentTotalAmount').textContent;
+
+    if (selectedMethod === "QRIS") {
+        // Menggunakan API QR gratis untuk simulasi pembayaran QRIS dinamis profesional
+        instructionContent.innerHTML = `
+            <div class="qr-box">
+                <p>Silakan pindai kode QRIS di bawah menggunakan aplikasi e-wallet Anda:</p>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=RouveCoPaymentTotal:${totalAmountText}" alt="QRIS QR Code">
+                <small style="color:#777;">Otomatis diverifikasi oleh sistem</small>
+            </div>
+        `;
+    } else if (selectedMethod === "BCA") {
+        instructionContent.innerHTML = `
+            <div class="va-box">
+                <p>Transfer via Virtual Account Bank BCA:</p>
+                <strong class="va-number">88012 0831 4452 167</strong>
+                <p style="font-size:0.8rem; color:#666;">• Batas Pembayaran: 2 jam.<br>• Bisa dari m-BCA, KlikBCA, atau ATM BCA.</p>
+            </div>
+        `;
+    } else if (selectedMethod === "Mandiri") {
+        instructionContent.innerHTML = `
+            <div class="va-box">
+                <p>Transfer via Virtual Account Bank Mandiri:</p>
+                <strong class="va-number">70014 0852 9941 114</strong>
+                <p style="font-size:0.8rem; color:#666;">• Batas Pembayaran: 2 jam.<br>• Bisa dari Livin' by Mandiri atau ATM Mandiri.</p>
+            </div>
+        `;
+    }
+}
+
 function initPaymentPage() {
     const paymentOrderList = document.getElementById('paymentOrderList');
     const paymentTotalAmount = document.getElementById('paymentTotalAmount');
     const placeOrderBtn = document.getElementById('placeOrderBtn');
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    const methodRadios = document.querySelectorAll('input[name="paymentMethod"]');
 
     if (!paymentOrderList || !paymentTotalAmount) return;
 
     const items = Object.values(cart);
     
-    // Proteksi Pengguna: Jika mengakses payment.html dengan keadaan keranjang kosong, kembalikan ke index.html
     if (!items.length) {
         alert("Keranjang Anda kosong, silakan pilih produk terlebih dahulu.");
         window.location.href = "index.html";
         return;
     }
 
+    // Render Ringkasan Pesanan di Sisi Kanan Form
     paymentOrderList.innerHTML = items.map(item => `
         <div class="pay-order-item">
             <span>${item.name} (x${item.quantity})</span>
@@ -200,7 +236,15 @@ function initPaymentPage() {
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     paymentTotalAmount.textContent = formatPrice(total);
 
-    // Event Handler saat Menekan Tombol Eksekusi Bayar Final
+    // Jalankan instruksi default awal (QRIS)
+    updatePaymentInstructions();
+
+    // Dengarkan perubahan pilihan metode pembayaran oleh user
+    methodRadios.forEach(radio => {
+        radio.addEventListener('change', updatePaymentInstructions);
+    });
+
+    // Event Handler saat Menekan Tombol Eksekusi Bayar Final -> Cetak Nota
     if (placeOrderBtn) {
         placeOrderBtn.addEventListener('click', () => {
             const name = document.getElementById('customerName').value.trim();
@@ -213,16 +257,60 @@ function initPaymentPage() {
                 return;
             }
 
-            showToast(`Pesanan Sukses! Silakan selesaikan pembayaran via ${method}.`);
+            // Ganti Blok Formulir Menjadi Blok Nota Pembayaran Resmi
+            document.getElementById('checkoutFormBlock').classList.add('hidden');
+            const invoiceBlock = document.getElementById('invoiceBlock');
+            invoiceBlock.classList.remove('hidden');
+
+            // Generate Data ke Lembar Nota Kertas Kustom
+            const randId = Math.floor(100000 + Math.random() * 900000);
+            const currentDate = new Date().toISOString().split('T')[0];
+
+            document.getElementById('invId').textContent = `#RC-${randId}`;
+            document.getElementById('invDate').textContent = currentDate;
+            document.getElementById('invName').textContent = name;
+            document.getElementById('invPhone').textContent = phone;
+            document.getElementById('invAddress').textContent = address;
+            document.getElementById('invMethod').textContent = (method === "QRIS") ? "QRIS Digital Pay" : `Virtual Account ${method}`;
             
-            // Pengosongan State Keranjang sesudah transaksi selesai
+            // Render Items Tabel Faktur Nota
+            const invItemsBody = document.getElementById('invItemsBody');
+            invItemsBody.innerHTML = items.map(item => `
+                <tr>
+                    <td><strong>${item.name}</strong></td>
+                    <td class="text-center">${item.quantity}</td>
+                    <td class="text-right">${formatPrice(item.price * item.quantity)}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('invTotalAmount').textContent = formatPrice(total);
+            showToast('Faktur transaksi berhasil diterbitkan!');
+
+            // Bersihkan data lokal keranjang
             localStorage.removeItem('rouve_cart');
             cart = {};
+        });
+    }
 
-            // Redirect kembali ke halaman utama sesudah 3 detik notifikasi berhasil tampil
-            setTimeout(() => {
-                window.location.href = "index.html";
-            }, 3000);
+    // Fungsi Klik Aksi Pengunduhan Berkas PDF Nota Online
+    if (downloadPdfBtn) {
+        downloadPdfBtn.addEventListener('click', () => {
+            const element = document.getElementById('invoiceCaptureArea');
+            const transactionId = document.getElementById('invId').textContent;
+            
+            // Pengaturan parameter engine cetak html2pdf
+            const opt = {
+                margin:       10,
+                filename:     `Invoice_${transactionId}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Jalankan unduh PDF otomatis
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast('PDF Berhasil diunduh!');
+            });
         });
     }
 }
@@ -273,7 +361,6 @@ if (document.querySelector('.product-grid')) {
         });
     }
 
-    // Aksi Tombol Checkout pada Halaman Utama -> Dialihkan Secara Mulus ke payment.html
     if (checkoutBtn) {
         checkoutBtn.addEventListener('click', () => {
             const items = Object.values(cart);
@@ -291,7 +378,7 @@ if (document.querySelector('.product-grid')) {
     });
 }
 
-// Deteksi Scroll untuk Animasi Ketinggian / Padding Header Navbar
+// Efek Scroll Animasi Header
 window.addEventListener('scroll', function() {
     const header = document.querySelector('header');
     if (!header) return;
@@ -302,4 +389,4 @@ window.addEventListener('scroll', function() {
     }
 });
 
-console.log('Rouve Co. System Engine Engine Active.');
+console.log('Rouve Co. System Engine Active.');

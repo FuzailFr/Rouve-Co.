@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rouve Co. | Pembayaran Aman</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="payment-page-body">
     <header class="scrolled">
@@ -19,10 +19,9 @@
     </header>
 
     <main class="payment-container-main">
-        <div class="payment-wrapper">
+        <div class="payment-wrapper" id="checkoutFormBlock">
             <h3>Formulir Pembayaran Resmi</h3>
             <div class="payment-grid">
-                <!-- Sisi Kiri: Formulir Pengiriman & Metode -->
                 <div class="payment-form">
                     <h4>Data Pengiriman</h4>
                     <div class="input-field">
@@ -45,28 +44,84 @@
                             <span>QRIS (OVO, Dana, GoPay, LinkAja)</span>
                         </label>
                         <label class="method-option">
-                            <input type="radio" name="paymentMethod" value="Transfer Bank BCA">
+                            <input type="radio" name="paymentMethod" value="BCA">
                             <span>Virtual Account Bank BCA</span>
                         </label>
                         <label class="method-option">
-                            <input type="radio" name="paymentMethod" value="Transfer Bank Mandiri">
+                            <input type="radio" name="paymentMethod" value="Mandiri">
                             <span>Virtual Account Bank Mandiri</span>
                         </label>
                     </div>
                 </div>
                 
-                <!-- Sisi Kanan: Ringkasan Belanja -->
                 <div class="payment-summary-box">
                     <h4>Ringkasan Pesanan</h4>
-                    <div id="paymentOrderList" class="payment-order-list">
-                        <!-- Item keranjang di-render otomatis oleh JS -->
-                    </div>
+                    <div id="paymentOrderList" class="payment-order-list"></div>
                     <div class="payment-total-row">
                         <span>Total Pembayaran:</span>
                         <strong id="paymentTotalAmount">Rp 0</strong>
                     </div>
+
+                    <div class="payment-instruction-block" id="instructionArea">
+                        <h5>Instruksi Pembayaran</h5>
+                        <div id="instructionContent">
+                            </div>
+                    </div>
+
                     <button id="placeOrderBtn" class="btn btn-primary btn-full" type="button">Konfirmasi & Bayar Sekarang</button>
                 </div>
+            </div>
+        </div>
+
+        <div class="invoice-container hidden" id="invoiceBlock">
+            <div class="invoice-paper" id="invoiceCaptureArea">
+                <div class="invoice-header">
+                    <div class="invoice-logo">ROUVE CO<span>.</span></div>
+                    <div class="invoice-meta">
+                        <h3>FAKTUR / NOTA RESMI</h3>
+                        <p>ID Transaksi: <span id="invId">#RC-XXXXXX</span></p>
+                        <p>Tanggal: <span id="invDate">2026-00-00</span></p>
+                    </div>
+                </div>
+                <hr class="inv-divider">
+                <div class="invoice-details-row">
+                    <div class="inv-col">
+                        <strong>Tujuan Pengiriman:</strong>
+                        <p id="invName">Nama Pembeli</p>
+                        <p id="invPhone">08123456</p>
+                        <p id="invAddress">Alamat Rumah</p>
+                    </div>
+                    <div class="inv-col text-right">
+                        <strong>Metode Pembayaran:</strong>
+                        <p id="invMethod">QRIS</p>
+                        <strong>Status:</strong>
+                        <p class="status-badge">LUNAS / BERHASIL</p>
+                    </div>
+                </div>
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Artikel Produk</th>
+                            <th class="text-center">Jumlah</th>
+                            <th class="text-right">Total Harga</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invItemsBody">
+                        </tbody>
+                </table>
+                <div class="invoice-total-section">
+                    <div class="inv-total-row">
+                        <span>Grand Total:</span>
+                        <strong id="invTotalAmount">Rp 0</strong>
+                    </div>
+                </div>
+                <div class="invoice-footer-note">
+                    <p>Terima kasih telah berbelanja di Rouve Co. Investasi terbaik untuk kepercayaan diri Anda.</p>
+                </div>
+            </div>
+            <div class="invoice-actions">
+                <button id="downloadPdfBtn" class="btn btn-primary"><i data-lucide="download"></i> Unduh Nota (PDF)</button>
+                <a href="index.html" class="btn btn-secondary">Kembali ke Beranda</a>
             </div>
         </div>
     </main>
@@ -76,7 +131,6 @@
     <script src="script.js"></script>
     <script>
         lucide.createIcons();
-        // Memaksa inisialisasi halaman pembayaran saat file dipanggil langsung
         if (typeof initPaymentPage === "function") {
             initPaymentPage();
         }
