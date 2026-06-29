@@ -5,23 +5,24 @@ const products = [
         name: 'Essential Tee',
         price: 149000,
         description: 'T-shirt minimalis dengan bahan lembut, cocok untuk tampilan kasual harian.',
-        image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80'
+        image: 'images/kaos.png'
     },
     {
         id: '2',
         name: 'Modern Hoodie',
         price: 299000,
         description: 'Hoodie modern dengan potongan nyaman untuk gaya kasual hangat setiap hari.',
-        image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500&auto=format&fit=crop&q=80'
+        image: 'images/hoodie.png'
     },
     {
         id: '3',
         name: 'Signature Cap',
         price: 125000,
         description: 'Topi signature yang ringan dan mudah dipadukan dengan hampir semua outfit.',
-        image: 'https://images.unsplash.com/photo-1534215754734-18e55d13ce3a?w=500&auto=format&fit=crop&q=80'
+        image: 'images/topi.png'
     }
 ];
+
 // Inisialisasi State Keranjang Belanja Menggunakan LocalStorage
 let cart = JSON.parse(localStorage.getItem('rouve_cart')) || {};
 
@@ -128,12 +129,14 @@ function openProductModal(product) {
     modalProductName.textContent = product.name;
     modalProductDescription.textContent = product.description;
     modalProductPrice.textContent = formatPrice(product.price);
+    
+    // PERBAIKAN: Membungkus path gambar ke dalam tag <img> asli agar fotonya meluncur keluar
     modalProductImage.innerHTML = `<img src="${product.image}" alt="${product.name}" style="width:100%; height:100%; object-fit:cover;">`;
+    
     modalQuantity.value = 1;
     modalAddToCart.dataset.productId = product.id;
     productModal.classList.remove('hidden');
 }
-
 // Logika Menambahkan Barang Ke Keranjang Belanja
 function addToCart(productId, quantity) {
     const product = products.find(item => item.id === productId);
@@ -292,26 +295,32 @@ function initPaymentPage() {
     }
 
     // Fungsi Klik Aksi Pengunduhan Berkas PDF Nota Online
-    if (downloadPdfBtn) {
-        downloadPdfBtn.addEventListener('click', () => {
-            const element = document.getElementById('invoiceCaptureArea');
-            const transactionId = document.getElementById('invId').textContent;
-            
-            // Pengaturan parameter engine cetak html2pdf
-            const opt = {
-                margin:       10,
-                filename:     `Invoice_${transactionId}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+// Perbaikan Fungsi Unduh PDF Nota Online di dalam script.js
+if (downloadPdfBtn) {
+    downloadPdfBtn.addEventListener('click', () => {
+        const element = document.getElementById('invoiceCaptureArea');
+        const transactionId = document.getElementById('invId').textContent;
+        
+        // Pengaturan opsi parameter yang dioptimasi agar pas di kertas A4 secara presisi
+        const opt = {
+            margin:       [15, 15, 15, 15], // Mengatur batas atas, kiri, bawah, kanan (dalam mm) secara seimbang
+            filename:     `Invoice_${transactionId}.pdf`,
+            image:        { type: 'jpeg', quality: 1.0 }, // Menaikkan kualitas rendering gambar ke maksimal
+            html2canvas:  { 
+                scale: 3, // Meningkatkan resolusi text agar tidak blur/pecah saat di-zoom
+                useCORS: true,
+                logging: false,
+                letterRendering: true
+            },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
 
-            // Jalankan unduh PDF otomatis
-            html2pdf().set(opt).from(element).save().then(() => {
-                showToast('PDF Berhasil diunduh!');
-            });
+        // Eksekusi download PDF secara aman
+        html2pdf().set(opt).from(element).save().then(() => {
+            showToast('PDF Berhasil diunduh dengan rapi!');
         });
-    }
+    });
+}
 }
 
 // --- INITIALIZATION EVENT LISTENERS PADA HALAMAN UTAMA ---
