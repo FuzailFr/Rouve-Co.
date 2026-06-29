@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rouve Co. | Pembayaran Aman</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="payment-page-body">
+    <header class="scrolled">
+        <nav>
+            <div class="logo"><a href="index.html" style="text-decoration:none; color:#000;">ROUVE CO<span>.</span></a></div>
+            <ul>
+                <li><a href="index.html">Kembali Belanja</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="payment-container-main">
+        <div class="payment-wrapper">
+            <h3>Formulir Pembayaran Resmi</h3>
+            <div class="payment-grid">
+                <!-- Sisi Kiri: Formulir Pengiriman & Metode -->
+                <div class="payment-form">
+                    <h4>Data Pengiriman</h4>
+                    <div class="input-field">
+                        <label for="customerName">Nama Lengkap</label>
+                        <input type="text" id="customerName" placeholder="Masukkan nama Anda" required>
+                    </div>
+                    <div class="input-field">
+                        <label for="customerPhone">Nomor Telepon</label>
+                        <input type="tel" id="customerPhone" placeholder="Contoh: 08123456789" required>
+                    </div>
+                    <div class="input-field">
+                        <label for="customerAddress">Alamat Lengkap</label>
+                        <textarea id="customerAddress" rows="3" placeholder="Nama jalan, nomor rumah, RT/RW, kecamatan" required></textarea>
+                    </div>
+                    
+                    <h4>Metode Pembayaran</h4>
+                    <div class="payment-methods">
+                        <label class="method-option">
+                            <input type="radio" name="paymentMethod" value="QRIS" checked>
+                            <span>QRIS (OVO, Dana, GoPay, LinkAja)</span>
+                        </label>
+                        <label class="method-option">
+                            <input type="radio" name="paymentMethod" value="Transfer Bank BCA">
+                            <span>Virtual Account Bank BCA</span>
+                        </label>
+                        <label class="method-option">
+                            <input type="radio" name="paymentMethod" value="Transfer Bank Mandiri">
+                            <span>Virtual Account Bank Mandiri</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Sisi Kanan: Ringkasan Belanja -->
+                <div class="payment-summary-box">
+                    <h4>Ringkasan Pesanan</h4>
+                    <div id="paymentOrderList" class="payment-order-list">
+                        <!-- Item keranjang di-render otomatis oleh JS -->
+                    </div>
+                    <div class="payment-total-row">
+                        <span>Total Pembayaran:</span>
+                        <strong id="paymentTotalAmount">Rp 0</strong>
+                    </div>
+                    <button id="placeOrderBtn" class="btn btn-primary btn-full" type="button">Konfirmasi & Bayar Sekarang</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+        // Memaksa inisialisasi halaman pembayaran saat file dipanggil langsung
+        if (typeof initPaymentPage === "function") {
+            initPaymentPage();
+        }
+    </script>
+</body>
+</html>

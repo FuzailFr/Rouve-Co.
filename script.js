@@ -1,37 +1,45 @@
-﻿const products = [
+﻿// Array Data Produk Utama
+const products = [
     {
         id: '1',
         name: 'Essential Tee',
         price: 149000,
         description: 'T-shirt minimalis dengan bahan lembut, cocok untuk tampilan kasual harian.',
-        image: 'Product Image 1'
+        image: 'Essential Tee'
     },
     {
         id: '2',
         name: 'Modern Hoodie',
         price: 299000,
         description: 'Hoodie modern dengan potongan nyaman untuk gaya kasual hangat setiap hari.',
-        image: 'Product Image 2'
+        image: 'Modern Hoodie'
     },
     {
         id: '3',
         name: 'Signature Cap',
         price: 125000,
         description: 'Topi signature yang ringan dan mudah dipadukan dengan hampir semua outfit.',
-        image: 'Product Image 3'
+        image: 'Signature Cap'
     }
 ];
 
-const cart = {};
+// Inisialisasi State Keranjang Belanja Menggunakan LocalStorage
+let cart = JSON.parse(localStorage.getItem('rouve_cart')) || {};
+
+// Selektor DOM Halaman Utama (Akan bernilai NULL jika berada di payment.html)
 const cartCountEl = document.getElementById('cartCount');
 const cartToggle = document.getElementById('cartToggle');
 const cartModal = document.getElementById('cartModal');
 const productModal = document.getElementById('productModal');
-const closeProductModal = document.getElementById('closeProductModal');
-const closeCartModal = document.getElementById('closeCartModal');
 const cartItemsContainer = document.getElementById('cartItems');
 const cartTotalEl = document.getElementById('cartTotal');
 const checkoutBtn = document.getElementById('checkoutBtn');
+
+// Selektor Tombol Tutup Halaman Utama
+const closeProductModal = document.getElementById('closeProductModal');
+const closeCartModal = document.getElementById('closeCartModal');
+
+// Detail Modal Produk
 const modalProductName = document.getElementById('modalProductName');
 const modalProductDescription = document.getElementById('modalProductDescription');
 const modalProductPrice = document.getElementById('modalProductPrice');
@@ -39,20 +47,49 @@ const modalProductImage = document.getElementById('modalProductImage');
 const modalQuantity = document.getElementById('modalQuantity');
 const modalAddToCart = document.getElementById('modalAddToCart');
 
+// Fungsi Utilitas Menyimpan State Keranjang
+function saveCart() {
+    localStorage.setItem('rouve_cart', JSON.stringify(cart));
+    if (cartCountEl) updateCartCount();
+}
+
+// Format Harga Rupiah
 function formatPrice(value) {
     return 'Rp ' + value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+// Update Jumlah Total Item di Navigasi Bar Halaman Utama
 function updateCartCount() {
+    if (!cartCountEl) return;
     const count = Object.values(cart).reduce((sum, item) => sum + item.quantity, 0);
     cartCountEl.textContent = count;
 }
 
+// Toast Notifikasi Kustom Profesional
+function showToast(message) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<i data-lucide="check" style="width:16px; height:16px; stroke-width:3px;"></i> <span>${message}</span>`;
+    container.appendChild(toast);
+    
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => { toast.classList.add('show'); }, 50);
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => { toast.remove(); }, 400);
+    }, 3000);
+}
+
+// Render Item Belanjaan ke Modal di Halaman Utama
 function renderCartItems() {
+    if (!cartItemsContainer) return;
     const items = Object.values(cart);
 
     if (!items.length) {
-        cartItemsContainer.innerHTML = '<p>Keranjang kosong. Tambahkan produk terlebih dahulu.</p>';
+        cartItemsContainer.innerHTML = '<p style="text-align:center; color:#666; font-size:0.9rem;">Keranjang kosong. Tambahkan produk terlebih dahulu.</p>';
         cartTotalEl.textContent = 'Rp 0';
         updateCartCount();
         return;
@@ -82,16 +119,14 @@ function renderCartItems() {
     updateCartCount();
 }
 
-function openCartModal() {
-    renderCartItems();
-    cartModal.classList.remove('hidden');
-}
-
-function closeCart() {
-    cartModal.classList.add('hidden');
-}
+// Fungsi Buka Tutup Modal Toko Halaman Utama
+function openCartModal() { renderCartItems(); if(cartModal) cartModal.classList.remove('hidden'); }
+function closeCart() { if(cartModal) cartModal.classList.add('hidden'); }
+// Penutupan Modal Detail Produk
+function closeProduct() { if(productModal) productModal.classList.add('hidden'); }
 
 function openProductModal(product) {
+    if(!productModal) return;
     modalProductName.textContent = product.name;
     modalProductDescription.textContent = product.description;
     modalProductPrice.textContent = formatPrice(product.price);
@@ -101,10 +136,7 @@ function openProductModal(product) {
     productModal.classList.remove('hidden');
 }
 
-function closeProduct() {
-    productModal.classList.add('hidden');
-}
-
+// Logika Menambahkan Barang Ke Keranjang Belanja
 function addToCart(productId, quantity) {
     const product = products.find(item => item.id === productId);
     if (!product) return;
@@ -120,12 +152,13 @@ function addToCart(productId, quantity) {
             quantity: qty
         };
     }
-
-    renderCartItems();
+    saveCart();
+    showToast(`${product.name} dimasukkan ke keranjang`);
 }
 
 function removeFromCart(productId) {
     delete cart[productId];
+    saveCart();
     renderCartItems();
 }
 
@@ -136,82 +169,137 @@ function changeCartQuantity(productId, delta) {
         removeFromCart(productId);
         return;
     }
+    saveCart();
     renderCartItems();
 }
 
-document.querySelectorAll('.product-grid .card').forEach(card => {
-    const productId = card.dataset.id;
-    card.addEventListener('click', () => {
-        const product = products.find(item => item.id === productId);
-        if (product) openProductModal(product);
-    });
+// --- LOGIKA MENANGANI HALAMAN PEMBAYARAN MANDIRI (payment.html) ---
+function initPaymentPage() {
+    const paymentOrderList = document.getElementById('paymentOrderList');
+    const paymentTotalAmount = document.getElementById('paymentTotalAmount');
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
 
-    const buyButton = card.querySelector('.buy-btn');
-    buyButton.addEventListener('click', event => {
-        event.stopPropagation();
-        addToCart(productId, 1);
-        openCartModal();
-    });
-});
+    if (!paymentOrderList || !paymentTotalAmount) return;
 
-modalAddToCart.addEventListener('click', () => {
-    const productId = modalAddToCart.dataset.productId;
-    const quantity = parseInt(modalQuantity.value, 10) || 1;
-    addToCart(productId, quantity);
-    closeProduct();
-    openCartModal();
-});
-
-cartToggle.addEventListener('click', openCartModal);
-closeProductModal.addEventListener('click', closeProduct);
-closeCartModal.addEventListener('click', closeCart);
-
-cartItemsContainer.addEventListener('click', event => {
-    const cartItem = event.target.closest('.cart-item');
-    if (!cartItem) return;
-    const id = cartItem.dataset.id;
-
-    if (event.target.classList.contains('increase')) {
-        changeCartQuantity(id, 1);
-    }
-    if (event.target.classList.contains('decrease')) {
-        changeCartQuantity(id, -1);
-    }
-    if (event.target.classList.contains('remove-item')) {
-        removeFromCart(id);
-    }
-});
-
-checkoutBtn.addEventListener('click', () => {
-    const itemCount = Object.values(cart).reduce((sum, item) => sum + item.quantity, 0);
-    if (!itemCount) {
-        alert('Keranjang Anda masih kosong. Tambahkan produk terlebih dahulu.');
+    const items = Object.values(cart);
+    
+    // Proteksi Pengguna: Jika mengakses payment.html dengan keadaan keranjang kosong, kembalikan ke index.html
+    if (!items.length) {
+        alert("Keranjang Anda kosong, silakan pilih produk terlebih dahulu.");
+        window.location.href = "index.html";
         return;
     }
-    alert(`Terima kasih! ${itemCount} produk berhasil dibeli.`);
-    Object.keys(cart).forEach(key => delete cart[key]);
-    renderCartItems();
-    closeCart();
-});
 
-window.addEventListener('click', event => {
-    if (event.target === productModal) {
-        closeProduct();
-    }
-    if (event.target === cartModal) {
-        closeCart();
-    }
-});
+    paymentOrderList.innerHTML = items.map(item => `
+        <div class="pay-order-item">
+            <span>${item.name} (x${item.quantity})</span>
+            <span>${formatPrice(item.price * item.quantity)}</span>
+        </div>
+    `).join('');
+    
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    paymentTotalAmount.textContent = formatPrice(total);
 
+    // Event Handler saat Menekan Tombol Eksekusi Bayar Final
+    if (placeOrderBtn) {
+        placeOrderBtn.addEventListener('click', () => {
+            const name = document.getElementById('customerName').value.trim();
+            const phone = document.getElementById('customerPhone').value.trim();
+            const address = document.getElementById('customerAddress').value.trim();
+            const method = document.querySelector('input[name="paymentMethod"]:checked').value;
+
+            if (!name || !phone || !address) {
+                showToast('Harap lengkapi seluruh data pengiriman Anda.');
+                return;
+            }
+
+            showToast(`Pesanan Sukses! Silakan selesaikan pembayaran via ${method}.`);
+            
+            // Pengosongan State Keranjang sesudah transaksi selesai
+            localStorage.removeItem('rouve_cart');
+            cart = {};
+
+            // Redirect kembali ke halaman utama sesudah 3 detik notifikasi berhasil tampil
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 3000);
+        });
+    }
+}
+
+// --- INITIALIZATION EVENT LISTENERS PADA HALAMAN UTAMA ---
+if (document.querySelector('.product-grid')) {
+    updateCartCount();
+
+    document.querySelectorAll('.product-grid .card').forEach(card => {
+        const productId = card.dataset.id;
+        
+        card.addEventListener('click', () => {
+            const product = products.find(item => item.id === productId);
+            if (product) openProductModal(product);
+        });
+
+        const buyButton = card.querySelector('.buy-btn');
+        buyButton.addEventListener('click', event => {
+            event.stopPropagation(); 
+            addToCart(productId, 1);
+            openCartModal();
+        });
+    });
+
+    if (modalAddToCart) {
+        modalAddToCart.addEventListener('click', () => {
+            const productId = modalAddToCart.dataset.productId;
+            const quantity = parseInt(modalQuantity.value, 10) || 1;
+            addToCart(productId, quantity);
+            closeProduct();
+            openCartModal();
+        });
+    }
+
+    if (cartToggle) cartToggle.addEventListener('click', openCartModal);
+    if (closeProductModal) closeProductModal.addEventListener('click', closeProduct);
+    if (closeCartModal) closeCartModal.addEventListener('click', closeCart);
+
+    if (cartItemsContainer) {
+        cartItemsContainer.addEventListener('click', event => {
+            const cartItem = event.target.closest('.cart-item');
+            if (!cartItem) return;
+            const id = cartItem.dataset.id;
+
+            if (event.target.classList.contains('increase')) changeCartQuantity(id, 1);
+            if (event.target.classList.contains('decrease')) changeCartQuantity(id, -1);
+            if (event.target.classList.contains('remove-item')) removeFromCart(id);
+        });
+    }
+
+    // Aksi Tombol Checkout pada Halaman Utama -> Dialihkan Secara Mulus ke payment.html
+    if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', () => {
+            const items = Object.values(cart);
+            if (!items.length) {
+                showToast('Keranjang Anda masih kosong.');
+                return;
+            }
+            window.location.href = "payment.html";
+        });
+    }
+
+    window.addEventListener('click', event => {
+        if (event.target === productModal) closeProduct();
+        if (event.target === cartModal) closeCart();
+    });
+}
+
+// Deteksi Scroll untuk Animasi Ketinggian / Padding Header Navbar
 window.addEventListener('scroll', function() {
     const header = document.querySelector('header');
+    if (!header) return;
     if (window.scrollY > 50) {
-        header.style.padding = '1rem 5%';
-        header.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        header.classList.add('scrolled');
     } else {
-        header.style.padding = '1.5rem 5%';
-        header.style.boxShadow = 'none';
+        header.classList.remove('scrolled');
     }
 });
 
-console.log('Rouve Co. Website Loaded Successfully');
+console.log('Rouve Co. System Engine Engine Active.');
